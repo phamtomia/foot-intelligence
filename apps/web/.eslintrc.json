@@ -1,0 +1,5 @@
+const config = {
+  extends: ['eslint:recommended', 'next/core-web-vitals'],
+};
+
+module.exports = config;

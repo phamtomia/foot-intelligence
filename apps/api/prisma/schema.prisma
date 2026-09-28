@@ -1,0 +1,323 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SubscriptionTier {
+  FREE
+  PREMIUM
+  ADMIN
+}
+
+enum MatchStatus {
+  SCHEDULED
+  LIVE
+  FINISHED
+  POSTPONED
+}
+
+model User {
+  id           String          @id @default(cuid())
+  email        String          @unique
+  username     String          @unique
+  firstName    String?
+  lastName     String?
+  passwordHash String
+  subscription SubscriptionTier @default(FREE)
+  language     String          @default("fr")
+  timezone     String          @default("Europe/Paris")
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  favorites    Favorite[]
+  alerts       Alert[]
+  analyses     Analysis[]
+  systemLogs   SystemLog[]
+}
+
+model Team {
+  id            String          @id @default(cuid())
+  name          String
+  shortName     String?
+  country       String?
+  logoUrl       String?
+  competitionId String?
+  competition   Competition?    @relation(fields: [competitionId], references: [id])
+  players       Player[]
+  homeMatches   Match[]         @relation("HomeTeamMatches")
+  awayMatches   Match[]         @relation("AwayTeamMatches")
+  forms         TeamForm[]
+  favorites     Favorite[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model Player {
+  id        String   @id @default(cuid())
+  name      String
+  position  String?
+  number    Int?
+  nationality String?
+  teamId    String?
+  team      Team?    @relation(fields: [teamId], references: [id])
+  lineups   Lineup[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Competition {
+  id        String   @id @default(cuid())
+  name      String
+  country   String?
+  type      String?
+  season    String?
+  teams     Team[]
+  matches   Match[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Match {
+  id            String             @id @default(cuid())
+  competitionId String?
+  competition   Competition?       @relation(fields: [competitionId], references: [id])
+  homeTeamId    String?
+  awayTeamId    String?
+  homeTeam      Team?              @relation("HomeTeamMatches", fields: [homeTeamId], references: [id])
+  awayTeam      Team?              @relation("AwayTeamMatches", fields: [awayTeamId], references: [id])
+  scheduledAt   DateTime?
+  venue         String?
+  status        MatchStatus        @default(SCHEDULED)
+  scoreHome     Int?
+  scoreAway     Int?
+  minute        Int?
+  events        MatchEvent[]
+  statistics    MatchStatistic[]
+  lineups       Lineup[]
+  forms         TeamForm[]
+  h2h           H2H[]
+  weather       Weather?
+  referee       Referee?
+  odds          Odds[]
+  analyses      Analysis[]
+  projections   Projection[]
+  scanResults   ScanResult[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+}
+
+model MatchEvent {
+  id          String   @id @default(cuid())
+  matchId     String
+  match       Match    @relation(fields: [matchId], references: [id])
+  minute      Int?
+  type        String
+  description String?
+  createdAt   DateTime @default(now())
+}
+
+model MatchStatistic {
+  id                 String   @id @default(cuid())
+  matchId            String
+  match              Match    @relation(fields: [matchId], references: [id])
+  possessionHome     Float?
+  possessionAway     Float?
+  shotsHome          Int?
+  shotsAway          Int?
+  shotsOnTargetHome  Int?
+  shotsOnTargetAway  Int?
+  xgHome             Float?
+  xgAway             Float?
+  cornersHome        Int?
+  cornersAway        Int?
+  yellowCardsHome    Int?
+  yellowCardsAway    Int?
+  redCardsHome       Int?
+  redCardsAway       Int?
+  dataStatus         String   @default("PARTIAL")
+  createdAt          DateTime @default(now())
+}
+
+model Lineup {
+  id        String   @id @default(cuid())
+  matchId   String
+  match     Match    @relation(fields: [matchId], references: [id])
+  playerId  String
+  player    Player   @relation(fields: [playerId], references: [id])
+  formation String?
+  position  String?
+  starter   Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model TeamForm {
+  id               String   @id @default(cuid())
+  teamId           String
+  team             Team     @relation(fields: [teamId], references: [id])
+  matchId          String?
+  match            Match?   @relation(fields: [matchId], references: [id])
+  formType         String   @default("LAST_5")
+  wins             Int      @default(0)
+  draws            Int      @default(0)
+  losses           Int      @default(0)
+  goalsFor         Int      @default(0)
+  goalsAgainst     Int      @default(0)
+  avgXg            Float?
+  avgShots         Float?
+  avgShotsOnTarget Float?
+  createdAt        DateTime @default(now())
+}
+
+model H2H {
+  id         String   @id @default(cuid())
+  matchId    String
+  match      Match    @relation(fields: [matchId], references: [id])
+  homeTeamId String?
+  awayTeamId String?
+  result     String?
+  goalsHome  Int?
+  goalsAway  Int?
+  btts       Boolean?
+  corners    Int?
+  cards      Int?
+  createdAt  DateTime @default(now())
+}
+
+model Referee {
+  id            String   @id @default(cuid())
+  name          String
+  matchId       String   @unique
+  match         Match    @relation(fields: [matchId], references: [id])
+  avgYellowCard Float?
+  avgRedCard    Float?
+  penalties     Int?
+  fouls         Float?
+  dataStatus    String   @default("PARTIAL")
+  createdAt     DateTime @default(now())
+}
+
+model Weather {
+  id          String   @id @default(cuid())
+  matchId     String   @unique
+  match       Match    @relation(fields: [matchId], references: [id])
+  temperature Float?
+  rain        Float?
+  wind        Float?
+  humidity    Float?
+  conditions  String?
+  updatedAt   DateTime @default(now())
+}
+
+model Odds {
+  id        String   @id @default(cuid())
+  matchId   String
+  match     Match    @relation(fields: [matchId], references: [id])
+  bookmaker String
+  market    String
+  homeOdds  Float?
+  drawOdds  Float?
+  awayOdds  Float?
+  updatedAt DateTime @default(now())
+}
+
+model OddsHistory {
+  id        String   @id @default(cuid())
+  matchId   String
+  market    String
+  value     Float?
+  updatedAt DateTime @default(now())
+}
+
+model Analysis {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  matchId    String
+  match      Match    @relation(fields: [matchId], references: [id])
+  title      String?
+  summary    String?
+  conclusion String?
+  confidence Float?
+  createdAt  DateTime @default(now())
+}
+
+model Projection {
+  id        String   @id @default(cuid())
+  matchId   String
+  match     Match    @relation(fields: [matchId], references: [id])
+  homeXg    Float?
+  awayXg    Float?
+  homeGoals Float?
+  awayGoals Float?
+  totalGoals Float?
+  createdAt DateTime @default(now())
+}
+
+model ScanFilter {
+  id          String   @id @default(cuid())
+  name        String
+  filtersJson String
+  createdAt   DateTime @default(now())
+}
+
+model ScanResult {
+  id              String   @id @default(cuid())
+  matchId         String
+  match           Match    @relation(fields: [matchId], references: [id])
+  score           Float?
+  criteriaMatched String?
+  createdAt       DateTime @default(now())
+}
+
+model Alert {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  type          String
+  title         String
+  conditionJson String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  teamId    String?
+  team      Team?    @relation(fields: [teamId], references: [id])
+  competition String?
+  matchId   String?
+  createdAt DateTime @default(now())
+}
+
+model ApiSource {
+  id            String   @id @default(cuid())
+  name          String
+  type          String
+  status        String   @default("PARTIAL")
+  lastSyncAt    DateTime?
+  configuration String?
+  createdAt     DateTime @default(now())
+}
+
+model DataUpdate {
+  id        String   @id @default(cuid())
+  entity    String
+  source    String?
+  status    String   @default("PARTIAL")
+  updatedAt DateTime @default(now())
+}
+
+model SystemLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  level       String
+  message     String
+  contextJson String?
+  createdAt   DateTime @default(now())
+}

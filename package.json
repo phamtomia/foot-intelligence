@@ -1,0 +1,18 @@
+{
+  "name": "foot-intelligence",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace @foot-intelligence/api\" \"npm run dev --workspace @foot-intelligence/web\"",
+    "build": "npm run build --workspace @foot-intelligence/api && npm run build --workspace @foot-intelligence/web",
+    "lint": "npm run lint --workspace @foot-intelligence/api && npm run lint --workspace @foot-intelligence/web",
+    "db:generate": "npm run db:generate --workspace @foot-intelligence/api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}
